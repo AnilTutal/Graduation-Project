@@ -216,22 +216,19 @@ import tensorflow as tf
 from tensorflow.keras import layers
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import classification_report, confusion_matrix
 import joblib
 
-# 1. ETİKETLENMİŞ VERİYİ YÜKLE (Yeni 300k+ verili dosya)
 df = pd.read_csv('riskli_temiz_veriseti.csv')
 
-# 2. VERİ HAZIRLIĞI (Derived_HRV Kaldırıldı - Toplam 8 Parametre)
 features = ['Heart Rate', 'Body Temperature', 'Oxygen Saturation', 'Age',
             'Gender', 'Weight (kg)', 'Height (m)', 'Derived_BMI']
 
 X = df[features]
 y = df['Risk_Status']
 
-# Bölümleme (%80 Eğitim - %20 Test)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# 3. ÖLÇEKLENDİRME (Scaler)
 scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
@@ -244,9 +241,8 @@ print(f"RİSKLİ ÖRNEK SAYISI (1) : {y.sum()}")
 print(f"NORMAL ÖRNEK SAYISI (0) : {len(y) - y.sum()}")
 print("="*50 + "\n")
 
-# 4. MODEL MİMARİSİ (Huni Modeli: 64-32-16)
 model = tf.keras.Sequential([
-    layers.Input(shape=(len(features),)), # Burası artık 8 nöron
+    layers.Input(shape=(len(features),)),
     layers.Dense(64, activation='relu'),
     layers.BatchNormalization(),
     layers.Dense(32, activation='relu'),
@@ -259,25 +255,44 @@ model.compile(optimizer=tf.keras.optimizers.Adam(0.001),
               loss='binary_crossentropy',
               metrics=['accuracy'])
 
-# 5. EĞİTİM
-print("🚀 Gelişmiş Eğitim Başlıyor (300k+ Veri ile)...")
+print("🚀 Eğitim Başlıyor...")
 model.fit(X_train_scaled, y_train,
           epochs=30,
-          batch_size=64, # Veri çok olduğu için batch size'ı 64 yaptık, daha hızlı eğitilir
+          batch_size=64,
           verbose=1,
           validation_data=(X_test_scaled, y_test))
 
-# 6. KAYDETME
 model.save('medical_binary_model.h5')
 joblib.dump(scaler, 'scaler.pkl')
-print("\n[TAMAM] Model ve Scaler başarıyla kaydedildi!")
+print("\n[TAMAM] Model ve Scaler kaydedildi!")
 
-# 7. SCALER SABİTLERİ (React ve ESP32 için hayati önemde!)
-print("\n--- GÜNCEL SCALER SABİTLERİ (8 PARAMETRE) ---")
-print("MEAN (Ortalamalar):")
-print(list(scaler.mean_))
-print("\nSCALE (Standart Sapmalar):")
-print(list(scaler.scale_))
+# ============================================
+# YENİ: DETAYLI METRİKLER (eğitimi bozmaz)
+# ============================================
+y_pred_prob = model.predict(X_test_scaled)
+y_pred = (y_pred_prob >= 0.5).astype(int).flatten()
+
+print("\n" + "="*50)
+print("📊 DETAYLI SINIFLANDIRMA RAPORU")
+print("="*50)
+print(classification_report(y_test, y_pred, target_names=['NORMAL', 'RİSKLİ']))
+
+cm = confusion_matrix(y_test, y_pred)
+print("CONFUSION MATRIX:")
+print(f"                 Tahmin NORMAL  Tahmin RİSKLİ")
+print(f"Gerçek NORMAL  :     {cm[0][0]:<10}     {cm[0][1]}")
+print(f"Gerçek RİSKLİ :     {cm[1][0]:<10}     {cm[1][1]}")
+
+print("\n--- GÜNCEL SCALER SABİTLERİ ---")
+print("MEAN:", list(scaler.mean_))
+print("SCALE:", list(scaler.scale_))
+
+train_loss, train_acc = model.evaluate(X_train_scaled, y_train, verbose=0)
+test_loss, test_acc = model.evaluate(X_test_scaled, y_test, verbose=0)
+
+print(f"Eğitim Accuracy : %{train_acc*100:.2f}")
+print(f"Test Accuracy   : %{test_acc*100:.2f}")
+print(f"Fark            : %{abs(train_acc-test_acc)*100:.2f}")
 
 *************************************************************************************
 
@@ -294,8 +309,8 @@ model = load_model('medical_binary_model.h5')
 
 # 2. KRİTİK NOT: 8 PARAMETRELİ EĞİTİM SONUNDA ALDIĞIN GÜNCEL SABİTLERİ BURAYA YAZMALISIN!
 # Aşağıdakiler örnek 8'li değerlerdir, kendi eğitim çıktındaki 8'li listeyi buraya yapıştır.
-means = np.array([79.53, 36.74, 97.49, 53.43, 0.49, 74.98, 1.74, 25.15]) # 8 Parametre
-scales = np.array([11.55, 0.43, 1.44, 20.79, 0.49, 14.46, 0.14, 6.49])  # 8 Parametre
+means = np.array([82.334, 36.793, 96.362, 52.645, 0.499, 77.354, 1.761, 25.364]) # 8 Parametre
+scales = np.array([16.357, 0.854, 3.749, 20.574, 0.500, 17.034, 0.151, 6.620])  # 8 Parametre
 
 # 3. 50 Test Senaryosu (Ham Veriler)
 raw_scenarios = [
@@ -414,22 +429,29 @@ print("[OK] 'model_data.h' başarıyla oluşturuldu. Dosyayı Arduino projesine 
 # React'ta yaptığım arayüz örneği için h5 daosyasını uygun formata çeviriyorum.
 # Zip den sonra atınca reactta bazı yerleri değiştirmem gerekiyor.
 
-# 1. Gerekli kütüphaneyi kur (Colab'da saniyeler sürer)
 !pip install tensorflowjs
-import tensorflowjs as tfjs
+
 import tensorflow as tf
+import tensorflowjs as tfjs
+import joblib
 from google.colab import files
 
-# 2. .h5 dosyanı Colab'a yükle (Dosya seçme kutusu açılacak)
-uploaded = files.upload()
-model_name = list(uploaded.keys())[0] # Yüklediğin dosyanın adını alır
+# 1. Yeni modeli ve scaler'ı yükle
+model = tf.keras.models.load_model('medical_binary_model.h5')
+scaler = joblib.load('scaler.pkl')  # Bu satır eksikti!
 
-# 3. Modeli yükle ve TF.js formatına çevir
-model = tf.keras.models.load_model(model_name)
-tfjs.converters.save_keras_model(model, 'tfjs_model')
+# 2. Kontrol et - (None, 8) çıkmalı
+print("Model giriş şekli:", model.input_shape)
 
-# 4. Oluşan klasörü zipleyip bilgisayarına indir
-!zip -r model.zip tfjs_model
-files.download('model.zip')
+# 3. Dönüştür
+tfjs.converters.save_keras_model(model, 'tfjs_model_yeni')
+
+# 4. İndir
+!zip -r model_yeni.zip tfjs_model_yeni
+files.download('model_yeni.zip')
+
+# 5. MEANS ve SCALES - bunları React'a yazacaksın
+print("MEANS:", list(scaler.mean_))
+print("SCALES:", list(scaler.scale_))
 
 *************************************************************************************
