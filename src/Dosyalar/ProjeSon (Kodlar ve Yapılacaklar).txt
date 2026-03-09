@@ -1,3 +1,20 @@
+Yapılacaklar 
+
+(-) Ben buraya ESP32 dosyası yükledim. Bizim bundan sonra yapacağımız sırasıyla: 
+    1-Attığım dosyanın içindeki Arduino kodunu ESP32 nin içine atmak. 
+    2-ESP32 ve sensörler gelince onları birleştirmek.
+    3-Bir tane Sd kartın içine yine attığım dosyadaki SD dosyasını atmak. 
+
+Eğer yaptıklarımız hatasız çalışırsa biz sadece telefonu ve PC'yi WiFi'a bağlayıp tarayıcıdan 192.168.4.1 açacağız. Sonra uygulama çalışacak. 
+
+(-) ESP32 ve sensörler gelince biraz kodda değişiklik yapmak gerekebilir. 
+
+
+(Bunu istiyorsan — yani her ölçümü kaydetmek, geçmişe bakmak istiyorsan söyle, SD karta log dosyası yazan bir sistem ekleyebiliriz. Gerekli mi?)
+
+***********************************************************************************
+***********************************************************************************
+
 # Genel veriyi temizliyor.
 
 import pandas as pd
@@ -283,9 +300,7 @@ print(f"                 Tahmin NORMAL  Tahmin RİSKLİ")
 print(f"Gerçek NORMAL  :     {cm[0][0]:<10}     {cm[0][1]}")
 print(f"Gerçek RİSKLİ :     {cm[1][0]:<10}     {cm[1][1]}")
 
-print("\n--- GÜNCEL SCALER SABİTLERİ ---")
-print("MEAN:", list(scaler.mean_))
-print("SCALE:", list(scaler.scale_))
+print("\n" + "="*50)
 
 train_loss, train_acc = model.evaluate(X_train_scaled, y_train, verbose=0)
 test_loss, test_acc = model.evaluate(X_test_scaled, y_test, verbose=0)
@@ -293,6 +308,11 @@ test_loss, test_acc = model.evaluate(X_test_scaled, y_test, verbose=0)
 print(f"Eğitim Accuracy : %{train_acc*100:.2f}")
 print(f"Test Accuracy   : %{test_acc*100:.2f}")
 print(f"Fark            : %{abs(train_acc-test_acc)*100:.2f}")
+
+print("\n--- GÜNCEL SCALER SABİTLERİ ---")
+print("MEAN:", list(scaler.mean_))
+print("SCALE:", list(scaler.scale_))
+
 
 *************************************************************************************
 
@@ -453,5 +473,120 @@ files.download('model_yeni.zip')
 # 5. MEANS ve SCALES - bunları React'a yazacaksın
 print("MEANS:", list(scaler.mean_))
 print("SCALES:", list(scaler.scale_))
+
+*************************************************************************************
+
+# Keni verilerimle başka model kaç doğru veriyor. 
+
+import numpy as np
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.naive_bayes import GaussianNB
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+
+df = pd.read_csv('riskli_temiz_veriseti.csv')
+
+features = ['Heart Rate', 'Body Temperature', 'Oxygen Saturation', 'Age', 
+            'Gender', 'Weight (kg)', 'Height (m)', 'Derived_BMI']
+X = df[features]
+y = df['Risk_Status']
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+rf = RandomForestClassifier(n_estimators=100, random_state=42)
+rf.fit(X_train, y_train)
+
+gnb = GaussianNB()
+gnb.fit(X_train, y_train)
+
+raw_scenarios = [
+    [72,36.6,98,25,1,75,1.80],[105,36.8,97,30,0,60,1.65],[65,36.5,92,45,1,85,1.75],[80,38.2,96,12,0,40,1.50],[70,36.7,96,78,1,70,1.70],
+    [55,36.4,98,50,0,65,1.60],[85,36.8,99,40,1,110,1.75],[75,37.1,97,60,0,55,1.62],[125,39.0,88,80,1,75,1.72],[68,36.6,96,76,0,60,1.60],
+    [115,37.8,93,22,1,70,1.80],[70,36.6,96,76,0,65,1.65],[88,36.5,95,77,1,80,1.75],[130,36.7,98,28,1,90,1.85],[65,38.8,97,35,0,70,1.60],
+    [75,36.8,89,50,1,85,1.80],[95,36.6,96,40,0,120,1.60],[45,36.2,97,60,1,75,1.75],[82,36.9,98,79,0,55,1.62],[72,36.5,96,45,1,50,1.85],
+    [101,37.4,96,20,1,70,1.75],[60,36.0,94,33,0,58,1.68],[74,36.6,98,85,1,80,1.80],[110,39.5,91,5,1,18,1.10],[90,37.0,97,40,0,95,1.60],
+    [58,36.2,98,22,1,72,1.82],[120,37.5,90,45,0,80,1.65],[72,36.6,98,30,1,70,1.75],[76,36.8,97,35,0,62,1.68],[140,37.2,99,19,1,75,1.85],
+    [66,35.0,95,55,0,70,1.65],[88,36.9,85,65,1,90,1.75],[70,36.6,98,80,0,50,1.55],[102,38.6,94,25,1,85,1.80],[50,36.4,96,42,0,60,1.70],
+    [78,37.4,97,77,1,88,1.78],[92,36.8,98,20,0,100,1.55],[70,36.6,98,40,1,70,1.75],[110,36.9,97,30,0,55,1.60],[74,39.2,96,50,1,80,1.75],
+    [65,36.7,93,60,0,70,1.65],[105,37.8,94,15,1,55,1.70],[72,36.6,98,28,0,55,1.65],[80,36.8,97,82,1,75,1.70],[118,38.1,92,40,0,90,1.60],
+    [60,36.5,96,35,1,130,1.85],[95,37.5,95,25,0,65,1.70],[70,36.6,98,10,1,30,1.40],[130,39.5,85,70,0,60,1.55],[72,36.6,98,35,1,78,1.80],
+    [70,36.5,98,22,1,70,1.75],[115,39.2,92,28,0,55,1.60],[60,36.6,99,45,1,105,1.80],[82,37.1,94,65,0,75,1.55],[145,37.0,97,19,1,80,1.85],
+    [75,36.4,98,5,1,18,1.10],[52,35.8,96,70,0,60,1.60],[90,38.5,95,35,1,85,1.75],[65,36.7,88,50,0,70,1.65],[110,36.8,96,82,1,65,1.72],
+    [72,36.6,98,25,0,52,1.68],[102,37.5,93,12,1,40,1.50],[68,36.5,97,77,0,58,1.62],[125,39.5,85,40,1,90,1.80],[88,36.9,95,30,0,120,1.65],
+    [62,36.2,98,21,1,70,1.85],[95,37.8,91,55,0,80,1.58],[74,36.8,97,85,1,75,1.70],[135,37.2,98,27,0,65,1.70],[58,36.0,94,42,1,88,1.75],
+    [80,36.6,99,10,0,30,1.45],[105,38.8,92,3,1,14,0.95],[70,36.7,96,68,0,72,1.60],[118,37.4,90,48,1,95,1.78],[66,36.4,98,33,0,50,1.60],
+    [78,36.8,97,24,1,140,1.80],[92,37.6,95,15,0,45,1.55],[50,36.1,96,58,1,82,1.75],[122,39.1,87,72,0,63,1.55],[74,36.6,98,40,1,78,1.82],
+    [108,37.9,94,20,0,55,1.65],[64,36.5,93,80,1,68,1.70],[85,37.0,97,38,0,110,1.60],[130,38.5,96,25,1,85,1.85],[76,36.7,98,29,0,60,1.68],
+    [55,36.3,91,62,1,85,1.75],[98,37.5,94,18,0,48,1.62],[72,36.6,99,75,1,70,1.75],[112,39.4,89,45,0,75,1.65],[68,36.8,97,10,1,35,1.40],
+    [84,37.2,95,55,0,90,1.58],[140,37.8,98,30,1,80,1.80],[60,36.5,92,79,0,55,1.60],[101,38.6,93,22,1,72,1.78],[74,36.6,98,50,0,65,1.65],
+    [95,37.3,96,35,1,115,1.80],[48,35.9,97,65,0,60,1.55],[120,36.9,91,26,1,85,1.85],[78,39.0,95,12,0,42,1.52],[70,36.5,98,28,1,75,1.78]
+]
+
+expected_labels = [
+    0,1,1,1,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1,1,
+    1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,1,1,0,1,1,
+    1,1,1,1,0,1,1,1,1,0,0,1,1,1,1,1,1,1,1,1,
+    1,1,1,1,1,0,1,1,1,1,1,1,0,1,0,1,1,1,1,0,
+    1,1,1,1,0,1,1,0,1,1,1,1,1,1,0,1,1,1,1,0
+]
+
+scenarios_with_bmi = []
+for s in raw_scenarios:
+    hr, temp, spo2, age, gen, w, h = s
+    bmi = w / (h ** 2)
+    scenarios_with_bmi.append([hr, temp, spo2, age, gen, w, h, bmi])
+X_100 = pd.DataFrame(scenarios_with_bmi, columns=features)
+
+# TEST SETİ
+rf_test_preds  = rf.predict(X_test)
+gnb_test_preds = gnb.predict(X_test)
+rf_test_acc    = accuracy_score(y_test, rf_test_preds)  * 100
+gnb_test_acc   = accuracy_score(y_test, gnb_test_preds) * 100
+
+# 100 SENARYO
+rf_100_preds   = rf.predict(X_100)
+gnb_100_preds  = gnb.predict(X_100)
+rf_100_acc     = accuracy_score(expected_labels, rf_100_preds)  * 100
+gnb_100_acc    = accuracy_score(expected_labels, gnb_100_preds) * 100
+
+# ================================================
+# ÖZET TABLO
+# ================================================
+print("\n" + "="*70)
+print("📊 KARŞILAŞTIRMALI MODEL ANALİZİ")
+print("="*70)
+print(f"{'Model':<35} {'Test Seti':>10} {'100 Senaryo':>12}")
+print("-"*70)
+print(f"{'Random Forest (GitHub mantığı)':<35} %{rf_test_acc:>8.2f}   %{rf_100_acc:>8.2f}")
+print(f"{'Naive Bayes (GitHub ana modeli)':<35} %{gnb_test_acc:>8.2f}   %{gnb_100_acc:>8.2f}")
+print(f"{'Benim MLP Modelim':<35} %{'99.49':>8}   %{'96.00':>8}")
+print("="*70)
+
+# ================================================
+# DETAYLI RAPORLAR
+# ================================================
+print("\n📋 RANDOM FOREST - Test Seti Detaylı Rapor:")
+print(classification_report(y_test, rf_test_preds, target_names=['NORMAL', 'RİSKLİ']))
+cm = confusion_matrix(y_test, rf_test_preds)
+print(f"  Doğru NORMAL  : {cm[0][0]}  |  Yanlış Alarm : {cm[0][1]}")
+print(f"  Kaçan Hasta   : {cm[1][0]}  |  Doğru RİSKLİ: {cm[1][1]}")
+
+print("\n📋 NAİVE BAYES - Test Seti Detaylı Rapor:")
+print(classification_report(y_test, gnb_test_preds, target_names=['NORMAL', 'RİSKLİ']))
+cm2 = confusion_matrix(y_test, gnb_test_preds)
+print(f"  Doğru NORMAL  : {cm2[0][0]}  |  Yanlış Alarm : {cm2[0][1]}")
+print(f"  Kaçan Hasta   : {cm2[1][0]}  |  Doğru RİSKLİ: {cm2[1][1]}")
+
+print("\n📋 100 SENARYO - Random Forest Detaylı Rapor:")
+print(classification_report(expected_labels, rf_100_preds, target_names=['NORMAL', 'RİSKLİ']))
+
+print("\n📋 100 SENARYO - Naive Bayes Detaylı Rapor:")
+print(classification_report(expected_labels, gnb_100_preds, target_names=['NORMAL', 'RİSKLİ']))
+
+print("\n💡 YORUM:")
+print("- MLP modeli ESP32'de TFLite ile çalışabilir, RF ve NB çalışamaz.")
+print(f"- Naive Bayes test setinde %{gnb_test_acc:.2f} kalırken MLP %99.49 elde etti.")
+print("- MLP bağımsız 100 senaryoda %96.00 ile güçlü genelleme yaptı.")
 
 *************************************************************************************
