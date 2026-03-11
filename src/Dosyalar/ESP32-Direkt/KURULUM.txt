@@ -1,0 +1,90 @@
+=====================================================
+MediTarama - ESP32 Kurulum Talimatları
+=====================================================
+
+KLASÖR YAPISI:
+  meditarama_esp32/
+  ├── meditarama_esp32.ino   ← Arduino kodu
+  ├── model_data.h           ← TFLite model (Colab'dan üretilecek)
+  └── data/
+      └── index.html         ← Web arayüzü (SPIFFS'e gidecek)
+
+=====================================================
+ADIM 1 — model_data.h Üret (Google Colab)
+=====================================================
+1. tflite_donustur.py dosyasını Colab'da çalıştır
+2. Colab'a şu dosyaları yükle:
+   - medical_binary_model.h5
+   - scaler.pkl
+3. Çalıştır → model_data.h indirilir
+4. Bu dosyayı meditarama_esp32/ klasörüne koy
+   (.ino ile aynı klasörde olmalı)
+
+=====================================================
+ADIM 2 — Arduino IDE Hazırla
+=====================================================
+1. Arduino IDE'yi aç
+2. ESP32 board kurulu değilse:
+   File → Preferences → Additional Board URLs:
+   https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+   → Tools → Boards Manager → "ESP32" → Kur
+
+3. Kütüphaneleri kur (Tools → Manage Libraries):
+   - TensorFlowLite_ESP32
+   - SparkFun MAX3010x Pulse and Proximity Sensor Library
+   - OneWire
+   - DallasTemperature
+
+4. Tools → Board → "ESP32 Dev Module" seç
+5. Partition Scheme → "Default 4MB with spiffs" seç (ÖNEMLİ!)
+
+=====================================================
+ADIM 3 — SPIFFS'e index.html Yükle
+=====================================================
+1. meditarama_esp32/ klasörünün içinde data/ klasörü oluştur
+2. index.html'i data/ klasörüne koy
+3. Arduino IDE'de:
+   Tools → ESP32 Sketch Data Upload
+   (Bu seçenek yoksa: Arduino ESP32 filesystem uploader plugin'ini kur)
+   Plugin: https://github.com/me-no-dev/arduino-esp32fs-plugin
+
+=====================================================
+ADIM 4 — Kodu Yükle
+=====================================================
+1. ESP32'yi USB'ye bağla
+2. Tools → Port → ESP32'nin portu
+3. Upload butonuna bas (→)
+4. Serial Monitor'ü aç (115200 baud)
+   "=== Hazır! 192.168.4.1 ===" mesajını bekle
+
+=====================================================
+ADIM 5 — Test Et
+=====================================================
+1. Telefon veya PC'den WiFi ağlarını tara
+2. "MediTarama" ağına bağlan (şifre yok)
+3. Tarayıcıda: 192.168.4.1
+4. Hasta bilgilerini gir → Sensör tara → Sonuç gör
+
+=====================================================
+DONANIM BAĞLANTILARI
+=====================================================
+MAX30102:
+  VCC  → 3.3V
+  GND  → GND
+  SDA  → GPIO 21
+  SCL  → GPIO 22
+
+DS18B20:
+  VCC  → 3.3V
+  GND  → GND
+  DATA → GPIO 4
+  (DATA ile VCC arasına 4.7kΩ direnç bağla!)
+
+=====================================================
+NOTLAR
+=====================================================
+- SD kart gerekmez, her şey ESP32'nin içinde
+- model_data.h oluşturulunca bir daha değiştirmeye gerek yok
+- index.html güncellemek için sadece SPIFFS'e tekrar yükle
+- Kod değişikliği için Upload butonu yeterli
+=====================================================

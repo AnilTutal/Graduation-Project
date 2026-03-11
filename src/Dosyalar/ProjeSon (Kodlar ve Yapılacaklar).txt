@@ -12,6 +12,10 @@ Eğer yaptıklarımız hatasız çalışırsa biz sadece telefonu ve PC'yi WiFi'
 
 (Bunu istiyorsan — yani her ölçümü kaydetmek, geçmişe bakmak istiyorsan söyle, SD karta log dosyası yazan bir sistem ekleyebiliriz. Gerekli mi?)
 
+
+---
+Ya SD kart ile yapacağız ya da direkt esp32'nin içine atacağız. Sd ile yapmak istersek bir tane sd modülü almak gerek. Direkt esp3'nin içine gömmek istersek eğer hafıza yeter mi emin değilim. Yeterse onun da kodları hazır. 
+
 ***********************************************************************************
 ***********************************************************************************
 
@@ -588,5 +592,72 @@ print("\n💡 YORUM:")
 print("- MLP modeli ESP32'de TFLite ile çalışabilir, RF ve NB çalışamaz.")
 print(f"- Naive Bayes test setinde %{gnb_test_acc:.2f} kalırken MLP %99.49 elde etti.")
 print("- MLP bağımsız 100 senaryoda %96.00 ile güçlü genelleme yaptı.")
+
+*************************************************************************************
+
+# h5 dosyamızı h dosyasına dönüştürüyorur. Diğeri yanlış mıydı bilmiyorum. Ama en son kod bu. 
+
+# ============================================================
+# MediTarama - TFLite Dönüştürücü
+# Bu kodu Google Colab'da çalıştır.
+# Gerekli dosyalar: medical_binary_model.h5, scaler.pkl
+# ============================================================
+
+import tensorflow as tf
+import joblib
+
+# 1. Modeli yükle
+model = tf.keras.models.load_model('medical_binary_model.h5')
+scaler = joblib.load('scaler.pkl')
+
+# 2. Kontrol
+print("Giriş şekli:", model.input_shape)  # (None, 8) olmalı
+print("Katmanlar:", [l.name for l in model.layers])
+
+# 3. TFLite'a dönüştür (quantization ile küçült)
+converter = tf.lite.TFLiteConverter.from_keras_model(model)
+converter.optimizations = [tf.lite.Optimize.DEFAULT]
+tflite_model = converter.convert()
+print(f"\nModel boyutu: {len(tflite_model)} bytes ({len(tflite_model)/1024:.1f} KB)")
+
+# 4. model_data.h dosyasını oluştur
+def to_c_array(data, name):
+    lines = ['#ifndef MODEL_DATA_H', '#define MODEL_DATA_H', '']
+    lines.append('#ifdef __has_attribute')
+    lines.append('#define ALIGN __attribute__((aligned(4)))')
+    lines.append('#else')
+    lines.append('#define ALIGN')
+    lines.append('#endif')
+    lines.append('')
+    lines.append(f'const unsigned char {name}[] ALIGN = {{')
+    
+    hex_vals = [f'0x{b:02x}' for b in data]
+    for i in range(0, len(hex_vals), 16):
+        chunk = hex_vals[i:i+16]
+        lines.append('  ' + ', '.join(chunk) + ',')
+    
+    lines.append('};')
+    lines.append(f'const unsigned int {name}_len = {len(data)};')
+    lines.append('')
+    lines.append('#endif // MODEL_DATA_H')
+    return '\n'.join(lines)
+
+with open('model_data.h', 'w') as f:
+    f.write(to_c_array(tflite_model, 'medical_model'))
+
+print("\n✅ model_data.h oluşturuldu!")
+print("\n--- SCALER SABİTLERİ (Arduino koduna yapıştır) ---")
+print("MEANS:")
+print(list(scaler.mean_))
+print("\nSCALES:")
+print(list(scaler.scale_))
+
+# 5. İndir
+from google.colab import files
+files.download('model_data.h')
+
+*************************************************************************************
+
+
 
 *************************************************************************************

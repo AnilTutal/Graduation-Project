@@ -4,8 +4,8 @@ import Main2 from './Main2';
 function App() {
   return (
     <div>
-      {/*<Main/>*/}
-      <Main2/> 
+      {/*<Main2/>*/}
+      <Main/> 
     </div>
   );
 }

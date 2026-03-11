@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MediTarama</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Georgia', serif;
+    background: #f7f7f5;
+    min-height: 100vh;
+  }
+
+  header {
+    background: #fff;
+    border-bottom: 1px solid #e8e8e4;
+    padding: 18px 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-dot { width: 10px; height: 10px; background: #111; border-radius: 50%; }
+  .logo-text { font-size: 18px; font-weight: bold; letter-spacing: 1px; color: #111; }
+  .badge {
+    font-size: 11px; color: #888;
+    border: 1px solid #ddd;
+    padding: 4px 10px; border-radius: 20px;
+  }
+
+  main { max-width: 520px; margin: 40px auto; padding: 0 16px; }
+
+  .card {
+    background: #fff;
+    border: 1px solid #e8e8e4;
+    border-radius: 12px;
+    padding: 32px 28px;
+  }
+
+  .card-title { font-size: 20px; font-weight: bold; color: #111; margin-bottom: 6px; }
+  .card-sub { font-size: 13px; color: #888; margin-bottom: 24px; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 24px; }
+
+  label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #555; }
+
+  input, select {
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 15px;
+    color: #111;
+    background: #fafaf8;
+    outline: none;
+    font-family: inherit;
+  }
+
+  .btn {
+    width: 100%;
+    padding: 14px;
+    background: #111;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    font-family: inherit;
+    transition: opacity 0.2s;
+  }
+  .btn:disabled { background: #ccc; cursor: not-allowed; }
+  .btn.grey { background: #444; }
+
+  /* Sensör satırları */
+  .sensor-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 0;
+    border-bottom: 1px solid #f0f0ee;
+  }
+  .sensor-row:last-of-type { border-bottom: none; margin-bottom: 20px; }
+
+  .sensor-icon { font-size: 22px; width: 30px; text-align: center; }
+  .sensor-info { flex: 1; }
+  .sensor-name { font-size: 13px; color: #555; margin-bottom: 3px; }
+  .sensor-val  { font-size: 17px; font-weight: bold; color: #111; font-family: monospace; }
+
+  .tick {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    border: 2px solid #ddd;
+    color: #ccc;
+    flex-shrink: 0;
+    transition: all 0.3s;
+  }
+  .tick.done { background: #1a7a4a; border-color: #1a7a4a; color: #fff; }
+  .tick.spin { border-color: #999; border-top-color: transparent;
+               animation: spin 0.8s linear infinite; color: transparent; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .done-msg {
+    text-align: center;
+    font-size: 13px;
+    color: #1a7a4a;
+    background: #f0fff6;
+    border: 1px solid #b3ffd6;
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 20px;
+    display: none;
+  }
+
+  /* Sonuç */
+  .result-banner {
+    border-radius: 10px;
+    padding: 28px;
+    text-align: center;
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .result-banner.risky { background: #fff1f1; border: 1px solid #ffb3b3; }
+  .result-banner.normal { background: #f1fff8; border: 1px solid #b3ffd6; }
+
+  .result-emoji { font-size: 44px; }
+  .result-title { font-size: 30px; font-weight: bold; letter-spacing: 2px; }
+  .result-title.risky { color: #c0392b; }
+  .result-title.normal { color: #1a7a4a; }
+  .result-conf { font-size: 13px; color: #666; }
+
+  .result-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  .result-item {
+    border: 1px solid #e8e8e4;
+    border-radius: 8px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .result-item-label { font-size: 9px; color: #aaa; letter-spacing: 0.5px; text-transform: uppercase; }
+  .result-item-val { font-size: 14px; font-weight: bold; color: #111; }
+
+  .status {
+    text-align: center;
+    font-size: 12px;
+    color: #aaa;
+    margin-top: 10px;
+    font-family: monospace;
+  }
+
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    <span class="logo-text">MediTarama</span>
+  </div>
+  <span class="badge">ESP32 · Çevrimdışı</span>
+</header>
+
+<main>
+
+  <!-- ADIM 1: FORM -->
+  <div id="step-form" class="card">
+    <h2 class="card-title">Hasta Bilgileri</h2>
+    <p class="card-sub">Lütfen aşağıdaki bilgileri doldurun.</p>
+
+    <div class="grid2">
+      <label>Yaş <input type="number" id="yas" placeholder="örn: 45" min="1"></label>
+      <label>Cinsiyet
+        <select id="cinsiyet">
+          <option value="1">Erkek</option>
+          <option value="0">Kadın</option>
+        </select>
+      </label>
+      <label>Kilo (kg) <input type="number" id="kilo" placeholder="örn: 75" min="1"></label>
+      <label>Boy (m) <input type="number" id="boy" placeholder="örn: 1.75" step="0.01" min="0.5"></label>
+    </div>
+
+    <button class="btn" id="btn-start" onclick="goToSensor()">Sensör Taramasını Başlat →</button>
+  </div>
+
+  <!-- ADIM 2: SENSÖR -->
+  <div id="step-sensor" class="card hidden">
+    <h2 class="card-title">Sensör Okuması</h2>
+    <p class="card-sub">Parmağınızı sensöre yerleştirin ve bekleyin.</p>
+
+    <!-- Nabız + SpO2 (MAX30102 - birlikte ölçülür) -->
+    <div class="sensor-row">
+      <span class="sensor-icon">♥</span>
+      <div class="sensor-info">
+        <div class="sensor-name">Nabız (MAX30102)</div>
+        <div class="sensor-val" id="val-hr">Ölçülüyor...</div>
+      </div>
+      <div class="tick spin" id="tick-hr"></div>
+    </div>
+
+    <div class="sensor-row">
+      <span class="sensor-icon">○</span>
+      <div class="sensor-info">
+        <div class="sensor-name">SpO2 (MAX30102)</div>
+        <div class="sensor-val" id="val-spo2">Ölçülüyor...</div>
+      </div>
+      <div class="tick spin" id="tick-spo2"></div>
+    </div>
+
+    <!-- Sıcaklık (DS18B20 - ayrı ölçülür) -->
+    <div class="sensor-row">
+      <span class="sensor-icon">◈</span>
+      <div class="sensor-info">
+        <div class="sensor-name">Sıcaklık (DS18B20)</div>
+        <div class="sensor-val" id="val-temp">Bekleniyor...</div>
+      </div>
+      <div class="tick" id="tick-temp"></div>
+    </div>
+
+    <div class="done-msg" id="done-msg">
+      ✓ Tüm ölçümler tamamlandı — elinizi kaldırabilirsiniz
+    </div>
+
+    <button class="btn" id="btn-predict" onclick="predict()" disabled>Riski Analiz Et →</button>
+    <p class="status" id="sensor-status"></p>
+  </div>
+
+  <!-- ADIM 3: SONUÇ -->
+  <div id="step-result" class="card hidden">
+    <div class="result-banner" id="result-banner">
+      <span class="result-emoji" id="result-emoji"></span>
+      <div class="result-title" id="result-title"></div>
+      <div class="result-conf" id="result-conf"></div>
+    </div>
+
+    <div class="result-grid" id="result-grid"></div>
+
+    <button class="btn grey" onclick="resetForm()">← Yeni Ölçüm</button>
+  </div>
+
+</main>
+
+<script>
+// =============================================
+// DURUM
+// =============================================
+let formData   = null;
+let sensorData = null;
+
+// =============================================
+// ADIM 1 → ADIM 2
+// =============================================
+function goToSensor() {
+  const yas  = Number(document.getElementById('yas').value);
+  const kilo = Number(document.getElementById('kilo').value);
+  const boy  = Number(document.getElementById('boy').value);
+
+  if (!yas || !kilo || !boy) {
+    alert('Lütfen tüm alanları doldurun.');
+    return;
+  }
+
+  formData = {
+    yas,
+    cinsiyet: Number(document.getElementById('cinsiyet').value),
+    kilo,
+    boy
+  };
+
+  show('step-sensor');
+
+  // Nabız + SpO2 ölçümünü başlat (5 saniye)
+  startMaxReading();
+}
+
+// =============================================
+// SIRAYLI ÖLÇÜM
+// =============================================
+function startMaxReading() {
+  setStatus('Nabız ve SpO2 ölçülüyor (5 saniye)...');
+  setTick('tick-hr',   'spin');
+  setTick('tick-spo2', 'spin');
+
+  setTimeout(async () => {
+    // 5 saniye sonra sensör verisini çek
+    try {
+      const params = new URLSearchParams({
+        age:    formData.yas,
+        gender: formData.cinsiyet,
+        weight: formData.kilo,
+        height: formData.boy
+      });
+      const res  = await fetch('/sensors?' + params.toString());
+      const data = await res.json();
+
+      if (!data.ready) {
+        // ESP32 henüz hazır değil, 1 saniye sonra tekrar dene
+        setStatus('Ölçüm devam ediyor...');
+        setTimeout(startMaxReading, 1000);
+        return;
+      }
+
+      sensorData = data;
+      document.getElementById('val-hr').textContent   = data.hr   + ' bpm';
+      document.getElementById('val-spo2').textContent = data.spo2 + ' %';
+      setTick('tick-hr',   'done');
+      setTick('tick-spo2', 'done');
+
+      // Sıcaklık ölçümü (1.5 saniye)
+      setStatus('Sıcaklık ölçülüyor...');
+      setTick('tick-temp', 'spin');
+
+      setTimeout(() => {
+        document.getElementById('val-temp').textContent = data.temp + ' °C';
+        setTick('tick-temp', 'done');
+
+        document.getElementById('done-msg').style.display = 'block';
+        document.getElementById('btn-predict').disabled = false;
+        setStatus('');
+      }, 1500);
+
+    } catch(e) {
+      // ESP32 yok — simüle değer
+      sensorData = { hr: 72, spo2: 98, temp: 36.6, bmi: 0, isRisky: null, confidence: null };
+      document.getElementById('val-hr').textContent   = '72 bpm';
+      document.getElementById('val-spo2').textContent = '98 %';
+      setTick('tick-hr',   'done');
+      setTick('tick-spo2', 'done');
+      setStatus('(Simüle değer)');
+
+      setTimeout(() => {
+        document.getElementById('val-temp').textContent = '36.6 °C';
+        setTick('tick-temp', 'done');
+        document.getElementById('done-msg').style.display = 'block';
+        document.getElementById('btn-predict').disabled = false;
+        setStatus('');
+      }, 1500);
+    }
+  }, 5500);
+}
+
+// =============================================
+// TAHMİN (ESP32'den geldi, sadece göster)
+// =============================================
+function predict() {
+  const data = sensorData;
+  const { yas, cinsiyet, kilo, boy } = formData;
+
+  // ESP32 tahmini zaten JSON içinde geliyor
+  // Eğer yoksa (simüle modda) fallback hesapla
+  let isRisky, confidence;
+
+  if (data.isRisky !== null && data.isRisky !== undefined) {
+    isRisky    = data.isRisky;
+    confidence = data.confidence;
+  } else {
+    // Simüle mod — basit kural (sadece demo)
+    isRisky    = false;
+    confidence = 85.0;
+  }
+
+  const bmi = boy > 0 ? (kilo / (boy * boy)).toFixed(1) : '—';
+
+  // Banner
+  const banner = document.getElementById('result-banner');
+  banner.className = 'result-banner ' + (isRisky ? 'risky' : 'normal');
+  document.getElementById('result-emoji').textContent = isRisky ? '⚠️' : '✅';
+  document.getElementById('result-title').textContent = isRisky ? 'RİSKLİ' : 'NORMAL';
+  document.getElementById('result-title').className   = 'result-title ' + (isRisky ? 'risky' : 'normal');
+  document.getElementById('result-conf').textContent  = 'Güven: %' + Number(confidence).toFixed(1);
+
+  // Detaylar
+  const items = [
+    { label: 'Nabız',     val: data.hr   + ' bpm' },
+    { label: 'SpO2',      val: data.spo2 + ' %' },
+    { label: 'Sıcaklık', val: data.temp  + ' °C' },
+    { label: 'BMI',       val: bmi },
+    { label: 'Yaş',       val: yas },
+    { label: 'Cinsiyet',  val: cinsiyet === 1 ? 'Erkek' : 'Kadın' },
+  ];
+
+  document.getElementById('result-grid').innerHTML = items.map(({ label, val }) => `
+    <div class="result-item">
+      <span class="result-item-label">${label}</span>
+      <span class="result-item-val">${val}</span>
+    </div>
+  `).join('');
+
+  show('step-result');
+}
+
+// =============================================
+// YARDIMCI
+// =============================================
+function show(id) {
+  ['step-form', 'step-sensor', 'step-result'].forEach(s => {
+    document.getElementById(s).classList.add('hidden');
+  });
+  document.getElementById(id).classList.remove('hidden');
+}
+
+function setTick(id, state) {
+  const el = document.getElementById(id);
+  el.className = 'tick';
+  if (state === 'done') {
+    el.classList.add('done');
+    el.textContent = '✓';
+  } else if (state === 'spin') {
+    el.classList.add('spin');
+    el.textContent = '';
+  }
+}
+
+function setStatus(msg) {
+  document.getElementById('sensor-status').textContent = msg;
+}
+
+function resetForm() {
+  sensorData = null;
+  formData   = null;
+
+  document.getElementById('yas').value   = '';
+  document.getElementById('kilo').value  = '';
+  document.getElementById('boy').value   = '';
+  document.getElementById('cinsiyet').value = '1';
+
+  document.getElementById('val-hr').textContent   = 'Ölçülüyor...';
+  document.getElementById('val-spo2').textContent  = 'Ölçülüyor...';
+  document.getElementById('val-temp').textContent  = 'Bekleniyor...';
+
+  document.getElementById('tick-hr').className   = 'tick';
+  document.getElementById('tick-spo2').className = 'tick';
+  document.getElementById('tick-temp').className = 'tick';
+
+  document.getElementById('done-msg').style.display = 'none';
+  document.getElementById('btn-predict').disabled    = true;
+  setStatus('');
+
+  show('step-form');
+}
+</script>
+</body>
+</html>
