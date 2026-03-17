@@ -1,6 +1,6 @@
 Yapılacaklar 
 
-(-) Ben buraya ESP32 dosyası yükledim. Bizim bundan sonra yapacağımız sırasıyla: 
+(-) ESP32-SD dosyası yükledim. Bizim bundan sonra yapacağımız sırasıyla: 
     1-Attığım dosyanın içindeki Arduino kodunu ESP32 nin içine atmak. 
     2-ESP32 ve sensörler gelince onları birleştirmek.
     3-Bir tane Sd kartın içine yine attığım dosyadaki SD dosyasını atmak. 
@@ -10,11 +10,10 @@ Eğer yaptıklarımız hatasız çalışırsa biz sadece telefonu ve PC'yi WiFi'
 (-) ESP32 ve sensörler gelince biraz kodda değişiklik yapmak gerekebilir. 
 
 
-(Bunu istiyorsan — yani her ölçümü kaydetmek, geçmişe bakmak istiyorsan söyle, SD karta log dosyası yazan bir sistem ekleyebiliriz. Gerekli mi?)
+(-) (Bunu istiyorsan — yani her ölçümü kaydetmek, geçmişe bakmak istiyorsan söyle, SD karta log dosyası yazan bir sistem ekleyebiliriz. Gerekli mi?)
 
 
----
-Ya SD kart ile yapacağız ya da direkt esp32'nin içine atacağız. Sd ile yapmak istersek bir tane sd modülü almak gerek. Direkt esp3'nin içine gömmek istersek eğer hafıza yeter mi emin değilim. Yeterse onun da kodları hazır. 
+(-) SD karta gerek kalmadan direkt ESP32'ye de atabiliriz. 
 
 ***********************************************************************************
 ***********************************************************************************
@@ -405,48 +404,6 @@ for i, s in enumerate(raw_scenarios):
 print("-" * 145)
 print(f"SONUÇ: 100 Senaryoda {correct} Doğru Tahmin! Başarı Oranı: %{(correct/100)*100:.2f}")
 print("="* 145)
-
-*************************************************************************************
-
-# Esp32 için h5 dosyasını model_data.h dosyaına çeviriyor.
-
-import tensorflow as tf
-import numpy as np
-
-# 1. Kaydedilen modeli yükle
-model = tf.keras.models.load_model('medical_binary_model.h5')
-
-# 2. TFLite Dönüştürücü (Boyutu ESP32 için optimize ediyoruz)
-converter = tf.lite.TFLiteConverter.from_keras_model(model)
-converter.optimizations = [tf.lite.Optimize.DEFAULT]
-tflite_model = converter.convert()
-
-# 3. Byte dizisine çevirme fonksiyonu
-def hex_to_c_array(hex_data, var_name):
-    c_str = f"const unsigned char {var_name}[] DATA_ALIGN_ATTRIBUTE = {{\n  "
-    for i, byte in enumerate(hex_data):
-        c_str += f"0x{byte:02x}, "
-        if (i + 1) % 12 == 0:
-            c_str += "\n  "
-    c_str += "\n};\n"
-    c_str += f"const int {var_name}_len = {len(hex_data)};"
-    return c_str
-
-# 4. model_data.h dosyasını oluştur ve içine yaz
-with open('model_data.h', 'w') as f:
-    # Header korumaları ve kütüphane eklemeleri
-    f.write('#ifndef MODEL_DATA_H\n#define MODEL_DATA_H\n\n')
-    f.write('#if defined(__has_attribute) && __has_attribute(aligned)\n')
-    f.write('#define DATA_ALIGN_ATTRIBUTE __attribute__((aligned(4)))\n')
-    f.write('#else\n')
-    f.write('#define DATA_ALIGN_ATTRIBUTE\n')
-    f.write('#endif\n\n')
-
-    # Model verisini yaz
-    f.write(hex_to_c_array(tflite_model, "medical_model"))
-    f.write('\n\n#endif // MODEL_DATA_H')
-
-print("[OK] 'model_data.h' başarıyla oluşturuldu. Dosyayı Arduino projesine ekleyebilirsin.")
 
 *************************************************************************************
 
