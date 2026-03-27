@@ -1,19 +1,6 @@
 Yapılacaklar 
 
-(-) ESP32-SD dosyası yükledim. Bizim bundan sonra yapacağımız sırasıyla: 
-    1-Attığım dosyanın içindeki Arduino kodunu ESP32 nin içine atmak. 
-    2-ESP32 ve sensörler gelince onları birleştirmek.
-    3-Bir tane Sd kartın içine yine attığım dosyadaki SD dosyasını atmak. 
-
-Eğer yaptıklarımız hatasız çalışırsa biz sadece telefonu ve PC'yi WiFi'a bağlayıp tarayıcıdan 192.168.4.1 açacağız. Sonra uygulama çalışacak. 
-
-(-) ESP32 ve sensörler gelince biraz kodda değişiklik yapmak gerekebilir. 
-
-
-(-) (Bunu istiyorsan — yani her ölçümü kaydetmek, geçmişe bakmak istiyorsan söyle, SD karta log dosyası yazan bir sistem ekleyebiliriz. Gerekli mi?)
-
-
-(-) SD karta gerek kalmadan direkt ESP32'ye de atabiliriz. 
+(-) 
 
 ***********************************************************************************
 ***********************************************************************************
@@ -71,7 +58,7 @@ try:
     df['Derived_BMI'] = df[weight_col] / (df[height_col] ** 2)
 
     # 6. SÜTUNLARI FİLTRELE VE GEREKSİZLERİ SİL (Kritik Değişiklik)
-    # Sadece modelin beklediği 8 temel sütunu tutuyoruz (HRV eğitim kodunda eklenecek)
+    # Sadece modelin beklediği 8 temel sütunu tutuyoruz 
     target_columns = {
         hr_col: 'Heart Rate',
         temp_col: 'Body Temperature',
@@ -104,7 +91,7 @@ import pandas as pd
 # 1. Dosyayı Yükle
 df = pd.read_csv('temiz_veriseti.csv')
 
-# 2. Gerekli Hesaplamaları Yap (Sadece BMI kaldı, HRV kaldırıldı)
+# 2. Gerekli Hesaplamaları Yap 
 # Tüm değerleri 2 basamağa yuvarlıyoruz
 df['Derived_BMI'] = (df['Weight (kg)'] / (df['Height (m)'] ** 2)).round(2)
 
@@ -139,7 +126,7 @@ df[numeric_cols] = df[numeric_cols].round(2)
 # 6. Yeni CSV Olarak Kaydet
 df.to_csv('riskli_temiz_veriseti.csv', index=False)
 
-print("İşlem tamamlandı! 'Derived_HRV' kaldırıldı ve tüm sayılar 2 basamağa yuvarlandı.")
+print("İşlem tamamlandı! ve tüm sayılar 2 basamağa yuvarlandı.")
 print(f"Toplam Satır: {len(df)}")
 print(f"Riskli (1) Sayısı: {df['Risk_Status'].sum()}")
 print(f"Normal (0) Sayısı: {len(df) - df['Risk_Status'].sum()}")
@@ -184,7 +171,7 @@ def append_medical_data_no_hrv(file_name='riskli_temiz_veriseti.csv', add_total=
         weight = round(np.random.uniform(45, 125), 2)
         height = round(np.random.uniform(1.50, 2.05), 2)
 
-        # Sadece BMI hesapla (HRV kaldırıldı)
+        # Sadece BMI hesapla 
         bmi = round(weight / (height ** 2), 2)
 
         # Risk Mantığı (Senin 5 ana kuralın)
@@ -398,7 +385,7 @@ for i, s in enumerate(raw_scenarios):
 
     conf = prob * 100 if is_risky else (1 - prob) * 100
 
-    # HRV hala print içinde, sadece kullanıcı görsün diye ekrana basılıyor
+    # HRV, sadece kullanıcı görsün diye ekrana basılıyor
     print(f"{i+1:<3} | {exp_str:<8} | {res_str:<8} | %{conf:<6.2f} | {hr:<3} | {temp:<5} | {spo2:<4} | {bmi:<9.2f} | {hrv:<10.2f} | {status}")
 
 print("-" * 145)

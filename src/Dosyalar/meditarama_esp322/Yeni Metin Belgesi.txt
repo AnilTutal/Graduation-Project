@@ -1,0 +1,54 @@
+Yapılacaklar
+
+(-) Ara yüzün kodları mobile de uygun olsun. 
+
+(-) Sensörleri bağlayınca kod otomatik veri yazmayı bıraksın.
+
+-------------------------------------------------------------------------------------
+
+C:\Users\anilt\OneDrive\Belgeler\Arduino\libraries\TensorFlowLite_ESP32\src\third_party\flatbuffers\stl_emulation.h dosyasını aç. 
+
+386. satırdaki count_ = other.count_; satırının başına // koyup kaydet.
+
+-------------------------------------------------------------------------------------
+
+1. Arduino IDE İçinden Sürümü Değiştir
+Bu işlem, IDE'nin kullandığı çekirdek dosyalarını eski ve uyumlu olanla değiştirecektir:
+
+Arduino IDE'nin sol menüsündeki Boards Manager simgesine (üst üste duran iki kare, 0-1 yazan simge) tıkla.
+
+Arama kutusuna esp32 yaz.
+
+esp32 by Espressif Systems paketini bul.
+
+Sürüm numarasının yazdığı açılır menüye tıkla ve listeden 2.0.17 sürümünü seç.
+
+INSTALL (veya Update) butonuna bas. İndirme işlemi bitene kadar bekle.
+
+-
+
+2. Manuel Yüklediğin Eski Dosyaları Temizle
+Daha önce manuel olarak packages klasörüne attığın 3.3.7 sürümüne ait dosyalar çakışma yapabilir. Bu yüzden o klasörü temizlemelisin:
+
+Klavyeden Windows + R tuşlarına bas ve %localappdata%\Arduino15\packages\esp32\hardware\esp32\ yazıp Enter'a bas.
+
+Bu klasörün içinde 3.3.7 (veya manuel oluşturduğun diğer sürüm) isimli bir klasör varsa onu tamamen sil.
+
+Sadece IDE'nin kendi kurduğu 2.0.17 klasörünün kaldığından emin ol.
+
+-------------------------------------------------------------------------------------
+
+Görselin sağ tarafında üzerinde "9600 baud" yazan bir kutucuk var.
+Oraya tıkla ve listeden 115200 baud seçeneğini seç.
+
+-------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
