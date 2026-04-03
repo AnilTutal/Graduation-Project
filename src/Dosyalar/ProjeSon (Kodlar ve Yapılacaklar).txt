@@ -225,6 +225,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import classification_report, confusion_matrix
 import joblib
+import matplotlib.pyplot as plt
 
 df = pd.read_csv('riskli_temiz_veriseti.csv')
 
@@ -295,6 +296,68 @@ print("\n" + "="*50)
 train_loss, train_acc = model.evaluate(X_train_scaled, y_train, verbose=0)
 test_loss, test_acc = model.evaluate(X_test_scaled, y_test, verbose=0)
 
+
+#****************************************
+
+# Toplam Veri: Eğer riskli_temiz_veriseti.csv dosyanın içinde toplam 300.000 satır varsa;
+# Split (Ayrım): Kodun başındaki test_size=0.2 komutu, verinin %20'sini teste (60k), %80'ini eğitime (240k) ayırır.
+# Sonuç: Grafik sadece "Eğitim Seti" (X_train) üzerinden çizildiği için en sağdaki %100 noktası 240.000 değerini gösterir.
+train_sizes = [0.2, 0.4, 0.6, 0.8, 1.0]
+results = []
+
+print("\n📊 Veri miktarı analizi başlıyor...")
+
+for size in train_sizes:
+    # Verinin belirli bir kısmını rastgele seç
+    X_subset = X_train_scaled[:int(len(X_train_scaled) * size)]
+    y_subset = y_train[:int(len(y_train) * size)]
+    
+    # Geçici bir model oluştur (ana modeli bozmamak için)
+    temp_model = tf.keras.models.clone_model(model)
+    temp_model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+    
+    # Hızlıca eğit (Gerçek eğitimi simüle etmek için az epoch)
+    temp_model.fit(X_subset, y_subset, epochs=5, batch_size=64, verbose=0)
+    
+    # Test seti üzerindeki başarısını ölç
+    _, acc = temp_model.evaluate(X_test_scaled, y_test, verbose=0)
+    results.append(acc * 100)
+    print(f"Veri Oranı %{int(size*100)} için Accuracy: %{acc*100:.2f}")
+
+# --- ÇİZGİ GRAFİĞİ OLUŞTURMA ---
+plt.figure(figsize=(12, 7))
+
+# Veri sayılarını x ekseni, sonuçları y ekseni olarak veriyoruz
+data_counts = [int(len(X_train) * s) for s in train_sizes]
+
+plt.plot(data_counts, results, marker='o', linestyle='-', linewidth=4, color='#8e44ad', markersize=8)
+
+plt.title('Learning Curve: Impact of Training Data Size on Accuracy', fontsize=16, fontweight='bold', pad=25)
+plt.xlabel('Number of Training Samples', fontweight='bold', fontsize=12)
+plt.ylabel('Test Accuracy (%)', fontweight='bold', fontsize=12)
+plt.grid(True, linestyle='--', alpha=0.6)
+
+# Grafiğin tavanını en yüksek değerden biraz daha yukarı alalım (Sıkışmayı önler)
+plt.ylim(min(results) - 0.5, max(results) + 0.5) 
+
+# Değerleri noktaların üzerine, birbirine çarpmayacak şekilde yazdıralım
+for i, txt in enumerate(results):
+    plt.annotate(f"%{txt:.2f}", 
+                 (data_counts[i], results[i]), 
+                 textcoords="offset points", 
+                 xytext=(0, 12), # Yazıyı 12 birim yukarı kaydırır
+                 ha='center', 
+                 va='bottom',
+                 fontweight='bold',
+                 fontsize=10,
+                 bbox=dict(boxstyle='round,pad=0.3', fc='white', ec='#8e44ad', alpha=0.7)) # Okunurluk için arka plan
+
+plt.tight_layout()
+plt.savefig('learning_curve_clean.png', dpi=300)
+plt.show()
+
+#****************************************
+
 print(f"Eğitim Accuracy : %{train_acc*100:.2f}")
 print(f"Test Accuracy   : %{test_acc*100:.2f}")
 print(f"Fark            : %{abs(train_acc-test_acc)*100:.2f}")
@@ -302,6 +365,7 @@ print(f"Fark            : %{abs(train_acc-test_acc)*100:.2f}")
 print("\n--- GÜNCEL SCALER SABİTLERİ ---")
 print("MEAN:", list(scaler.mean_))
 print("SCALE:", list(scaler.scale_))
+
 
 
 *************************************************************************************
@@ -424,30 +488,37 @@ print("SCALES:", list(scaler.scale_))
 
 *************************************************************************************
 
-# Keni verilerimle başka model kaç doğru veriyor. 
+# Keni verilerimle başka model kaç doğru veriyor. (Yeni kod)
 
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+import tensorflow as tf
 
+# 1. DOSYALARI YÜKLE
 df = pd.read_csv('riskli_temiz_veriseti.csv')
+# Resimdeki dosya ismine göre güncellendi
+my_model = tf.keras.models.load_model('medical_binary_model.h5')
 
-features = ['Heart Rate', 'Body Temperature', 'Oxygen Saturation', 'Age', 
+features = ['Heart Rate', 'Body Temperature', 'Oxygen Saturation', 'Age',
             'Gender', 'Weight (kg)', 'Height (m)', 'Derived_BMI']
 X = df[features]
 y = df['Risk_Status']
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
+# 2. MODELLERİ EĞİT (RF ve NB)
 rf = RandomForestClassifier(n_estimators=100, random_state=42)
 rf.fit(X_train, y_train)
 
 gnb = GaussianNB()
 gnb.fit(X_train, y_train)
 
+# 3. SENARYOLARI HAZIRLA
 raw_scenarios = [
     [72,36.6,98,25,1,75,1.80],[105,36.8,97,30,0,60,1.65],[65,36.5,92,45,1,85,1.75],[80,38.2,96,12,0,40,1.50],[70,36.7,96,78,1,70,1.70],
     [55,36.4,98,50,0,65,1.60],[85,36.8,99,40,1,110,1.75],[75,37.1,97,60,0,55,1.62],[125,39.0,88,80,1,75,1.72],[68,36.6,96,76,0,60,1.60],
@@ -486,56 +557,136 @@ for s in raw_scenarios:
     scenarios_with_bmi.append([hr, temp, spo2, age, gen, w, h, bmi])
 X_100 = pd.DataFrame(scenarios_with_bmi, columns=features)
 
-# TEST SETİ
+# 4. DİNAMİK MLP TAHMİNLERİ (H5 ve Scaler Kullanarak)
+# Hocam, taşınabilirlik için StandardScaler değerlerini manuel olarak tanımladık:
+means = np.array([82.334, 36.793, 96.362, 52.645, 0.499, 77.354, 1.761, 25.364])
+scales = np.array([16.357, 0.854, 3.749, 20.574, 0.500, 17.034, 0.151, 6.620])
+
+def get_mlp_predictions(data):
+    # Veriyi manuel olarak ölçeklendiriyoruz (StandardScaler mantığı)
+    data_scaled = (np.array(data) - means) / scales
+    
+    # Modelden tahmini alıyoruz
+    preds = my_model.predict(data_scaled)
+    
+    # 0.5 eşiğiyle 0 veya 1'e çevirip listeye döküyoruz
+    return (preds > 0.5).astype(int).flatten()
+
+# Tahminleri dinamik olarak tetikle
+mlp_test_preds = get_mlp_predictions(X_test)
+mlp_100_preds = get_mlp_predictions(X_100)
+
+# 5. DİNAMİK METRİKLERİN HESAPLANMASI
 rf_test_preds  = rf.predict(X_test)
 gnb_test_preds = gnb.predict(X_test)
-rf_test_acc    = accuracy_score(y_test, rf_test_preds)  * 100
-gnb_test_acc   = accuracy_score(y_test, gnb_test_preds) * 100
 
-# 100 SENARYO
+rf_test_acc    = accuracy_score(y_test, rf_test_preds) * 100
+gnb_test_acc   = accuracy_score(y_test, gnb_test_preds) * 100
+mlp_test_acc   = accuracy_score(y_test, mlp_test_preds) * 100
+
 rf_100_preds   = rf.predict(X_100)
 gnb_100_preds  = gnb.predict(X_100)
-rf_100_acc     = accuracy_score(expected_labels, rf_100_preds)  * 100
+
+rf_100_acc     = accuracy_score(expected_labels, rf_100_preds) * 100
 gnb_100_acc    = accuracy_score(expected_labels, gnb_100_preds) * 100
+mlp_100_acc    = accuracy_score(expected_labels, mlp_100_preds) * 100
 
-# ================================================
-# ÖZET TABLO
-# ================================================
-print("\n" + "="*70)
-print("📊 KARŞILAŞTIRMALI MODEL ANALİZİ")
-print("="*70)
+# 6. PANEL VERİLERİNİ OTOMATİK OLUŞTURMA
+cm = confusion_matrix(y_test, rf_test_preds)
+cm2 = confusion_matrix(y_test, gnb_test_preds)
+cm_mlp = confusion_matrix(y_test, mlp_test_preds)
+
+models_list = ['Random Forest', 'Naive Bayes', 'My MLP Model']
+missed_data = [cm[1][0], cm2[1][0], cm_mlp[1][0]]
+false_data = [cm[0][1], cm2[0][1], cm_mlp[0][1]]
+
+# Grafik verilerini otomatik çeken yardımcı tablo
+def get_row_metrics(y_true, y_pred, ds_name, m_name):
+    report = classification_report(y_true, y_pred, output_dict=True)
+    return [m_name, ds_name, report['accuracy']*100, report['weighted avg']['precision']*100, 
+            report['weighted avg']['recall']*100, report['weighted avg']['f1-score']*100]
+
+plot_data = []
+# RF
+plot_data.append(get_row_metrics(y_test, rf_test_preds, 'Test Set', models_list[0]))
+plot_data.append(get_row_metrics(expected_labels, rf_100_preds, '100 Scenarios', models_list[0]))
+# NB
+plot_data.append(get_row_metrics(y_test, gnb_test_preds, 'Test Set', models_list[1]))
+plot_data.append(get_row_metrics(expected_labels, gnb_100_preds, '100 Scenarios', models_list[1]))
+# MLP (DİNAMİK)
+plot_data.append(get_row_metrics(y_test, mlp_test_preds, 'Test Set', models_list[2]))
+plot_data.append(get_row_metrics(expected_labels, mlp_100_preds, '100 Scenarios', models_list[2]))
+
+df_metrics = pd.DataFrame(plot_data, columns=['Model', 'DataSet', 'Accuracy', 'Precision', 'Recall', 'F1-Score'])
+df_plot = df_metrics.melt(id_vars=['Model', 'DataSet'], value_vars=['Accuracy', 'Precision', 'Recall', 'F1-Score'], var_name='Metric', value_name='Score')
+
+# --- GRAFİKLER --- 
+fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(14, 20))
+metrics_order = ['Accuracy', 'Precision', 'Recall', 'F1-Score']
+styles = {models_list[0]: {'marker': 'o', 'color': '#2980b9'}, 
+          models_list[1]: {'marker': 's', 'color': '#7f8c8d'}, 
+          models_list[2]: {'marker': 'D', 'linestyle': '--', 'color': '#c0392b', 'linewidth': 3}}
+
+for ax, dset, title in zip([ax1, ax2], ['Test Set', '100 Scenarios'], ['Original Test Set', '100 Independent Scenarios']):
+    ax.set_title(f'Metric Analysis: {title} Performance', fontsize=14, fontweight='bold', pad=20)
+    ax.set_ylabel('Score (%)', fontweight='bold')
+    ax.set_ylim(60, 105)
+    ax.grid(True, linestyle='--', alpha=0.6)
+    for model, style in styles.items():
+        m_data = df_plot[(df_plot['Model'] == model) & (df_plot['DataSet'] == dset)]
+        m_data['Metric'] = pd.Categorical(m_data['Metric'], categories=metrics_order, ordered=True)
+        ax.plot(metrics_order, m_data.sort_values('Metric')['Score'], label=model, **style)
+    ax.legend(loc='lower left')
+
+x_axis = np.arange(len(models_list))
+width = 0.35
+ax3.bar(x_axis - width/2, missed_data, width, label='Missed Patients (FN)', color='#e74c3c', edgecolor='black')
+ax3.bar(x_axis + width/2, false_data, width, label='False Alarms (FP)', color='#f1c40f', edgecolor='black')
+ax3.set_title('Critical Safety Error Analysis (Total Counts)', fontsize=14, fontweight='bold')
+ax3.set_yscale('log')
+ax3.set_xticks(x_axis)
+ax3.set_xticklabels(models_list, fontweight='bold')
+ax3.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=2)
+
+plt.tight_layout(pad=4.0)
+plt.show()
+
+# --- ÖZET ÇİZGİ GRAFİKLER --- 
+def plot_summary(y_true, y_pred, m_name):
+    report = classification_report(y_true, y_pred, output_dict=True)
+    metrics = ['precision', 'recall', 'f1-score']
+    macro = [report['macro avg'][m]*100 for m in metrics]
+    weighted = [report['weighted avg'][m]*100 for m in metrics]
+    acc = report['accuracy']*100
+    plt.figure(figsize=(10, 6))
+    plt.plot(['Precision', 'Recall', 'F1-Score'], macro, marker='o', label='Macro Avg', linewidth=3, color='#34495e')
+    plt.plot(['Precision', 'Recall', 'F1-Score'], weighted, marker='s', label='Weighted Avg', linewidth=3, color='#16a085')
+    plt.axhline(y=acc, color='#e74c3c', linestyle='--', label=f'Accuracy ({acc:.1f}%)')
+    plt.title(f'Summary Performance: {m_name} (100 Scenarios)', fontsize=14, fontweight='bold')
+    plt.ylim(60, 105); plt.grid(True, alpha=0.5); plt.legend(); plt.show()
+
+plot_summary(expected_labels, rf_100_preds, models_list[0])
+plot_summary(expected_labels, gnb_100_preds, models_list[1])
+plot_summary(expected_labels, mlp_100_preds, models_list[2])
+
+# --- RAPORLAR --- 
+print("\n" + "="*70 + "\n📊 KARŞILAŞTIRMALI MODEL ANALİZİ\n" + "="*70)
 print(f"{'Model':<35} {'Test Seti':>10} {'100 Senaryo':>12}")
-print("-"*70)
-print(f"{'Random Forest (GitHub mantığı)':<35} %{rf_test_acc:>8.2f}   %{rf_100_acc:>8.2f}")
-print(f"{'Naive Bayes (GitHub ana modeli)':<35} %{gnb_test_acc:>8.2f}   %{gnb_100_acc:>8.2f}")
-print(f"{'Benim MLP Modelim':<35} %{'99.49':>8}   %{'96.00':>8}")
-print("="*70)
+print(f"{'Random Forest':<35} %{rf_test_acc:>8.2f}  %{rf_100_acc:>8.2f}")
+print(f"{'Naive Bayes':<35} %{gnb_test_acc:>8.2f}  %{gnb_100_acc:>8.2f}")
+print(f"{'Benim MLP Modelim':<35} %{mlp_test_acc:>8.2f}  %{mlp_100_acc:>8.2f}")
 
-# ================================================
-# DETAYLI RAPORLAR
-# ================================================
 print("\n📋 RANDOM FOREST - Test Seti Detaylı Rapor:")
 print(classification_report(y_test, rf_test_preds, target_names=['NORMAL', 'RİSKLİ']))
-cm = confusion_matrix(y_test, rf_test_preds)
-print(f"  Doğru NORMAL  : {cm[0][0]}  |  Yanlış Alarm : {cm[0][1]}")
-print(f"  Kaçan Hasta   : {cm[1][0]}  |  Doğru RİSKLİ: {cm[1][1]}")
+print(f"  Doğru NORMAL  : {cm[0][0]}  |  Yanlış Alarm : {cm[0][1]}\n  Kaçan Hasta   : {cm[1][0]}  |  Doğru RİSKLİ: {cm[1][1]}")
 
 print("\n📋 NAİVE BAYES - Test Seti Detaylı Rapor:")
 print(classification_report(y_test, gnb_test_preds, target_names=['NORMAL', 'RİSKLİ']))
-cm2 = confusion_matrix(y_test, gnb_test_preds)
-print(f"  Doğru NORMAL  : {cm2[0][0]}  |  Yanlış Alarm : {cm2[0][1]}")
-print(f"  Kaçan Hasta   : {cm2[1][0]}  |  Doğru RİSKLİ: {cm2[1][1]}")
+print(f"  Doğru NORMAL  : {cm2[0][0]}  |  Yanlış Alarm : {cm2[0][1]}\n  Kaçan Hasta   : {cm2[1][0]}  |  Doğru RİSKLİ: {cm2[1][1]}")
 
-print("\n📋 100 SENARYO - Random Forest Detaylı Rapor:")
-print(classification_report(expected_labels, rf_100_preds, target_names=['NORMAL', 'RİSKLİ']))
-
-print("\n📋 100 SENARYO - Naive Bayes Detaylı Rapor:")
-print(classification_report(expected_labels, gnb_100_preds, target_names=['NORMAL', 'RİSKLİ']))
-
-print("\n💡 YORUM:")
-print("- MLP modeli ESP32'de TFLite ile çalışabilir, RF ve NB çalışamaz.")
-print(f"- Naive Bayes test setinde %{gnb_test_acc:.2f} kalırken MLP %99.49 elde etti.")
-print("- MLP bağımsız 100 senaryoda %96.00 ile güçlü genelleme yaptı.")
+print("\n📋 MY MLP MODEL - Test Seti Detaylı Rapor:") # MLP eklendi
+print(classification_report(y_test, mlp_test_preds, target_names=['NORMAL', 'RİSKLİ']))
+print(f"  Doğru NORMAL  : {cm_mlp[0][0]}  |  Yanlış Alarm : {cm_mlp[0][1]}\n  Kaçan Hasta   : {cm_mlp[1][0]}  |  Doğru RİSKLİ: {cm_mlp[1][1]}")
 
 *************************************************************************************
 

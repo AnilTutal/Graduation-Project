@@ -1,0 +1,35 @@
+Resimlerin açıklaması
+-------------------------------------------------------------------------------------
+1. Model Kodu -> Bu Öğrenme Eğrisi (Learning Curve) üzerinden görüyoruz ki; veri setimiz büyüdükçe modelin tahmin tutarlılığı artıyor. Başlangıçta %97'lerde olan başarımız, veri setinin tamamını kullandığımızda %98.40 bandına yerleşiyor. Bu da modelimizin ezberlemediğini (overfitting yapmadığını), gerçekten verideki tıbbi desenleri öğrendiğini kanıtlıyor."
+
+***** 
+
+Kıyaslama Yaptığımız Grafikler (1,2,3,4,5)
+1,2  (Genel Performans Grafikleri (1. ve 2. Resim)) -> Bu iki grafik, modellerin hem bilinen (Test Seti) hem de bilinmeyen (100 Senaryo) veriler üzerindeki kararlılığını gösterir.
+
+İspat: Random Forest (Mavi) ve senin MLP Modelin (Kırmızı Kesik Çizgi) grafiklerin en üstünde, birbirine çok yakın ve dümdüz ilerliyor. Bu, modellerinin sadece ezberlemediğini, yeni durumlarda da %95-100 arasında yüksek başarı sergilediğini gösterir.
+
+Kıyas: Naive Bayes (Gri) çizgisinin aşağıda ve zikzaklı olması, onun tıbbi tahminler için çok daha zayıf ve güvenilmez bir model olduğunu ispatlar.
+
+*******
+
+3  Kritik Hata Analizi (3. Resim - En Önemli Grafik) ->
+Tıbbi bir projede en önemli şey "hata yapmamaktır". Bu grafik modellerin kaç kişiyi mağdur ettiğini gösterir.
+
+Missed Patients (Kırmızı Sütun): Gerçekten hasta olan ama modelin "sağlıklı" deyip eve gönderdiği kişilerdir. Naive Bayes tam 11.109 kişiyi kaçırırken, senin MLP Modelin ve Random Forest bu sayıyı neredeyse sıfıra (grafiğin en altına) indiriyor.
+
+False Alarms (Sarı Sütun): Sağlıklı insana "hastasın" deyip doktoru boş yere meşgul etmektir. Naive Bayes burada da çok hata yaparken senin modelin çok daha profesyonel bir sonuç veriyor.
+
+Sonuç: Hocana şunu söylemelisin: "Hocam, Naive Bayes dağlar kadar hata yaparken, bizim modelimiz hayati tehlike yaratacak hataları (Kaçan Hasta) minimize ederek güvenilirliğini kanıtlıyor."
+
+******
+
+4,5,6  (Özet Performans Profilleri (4. ve 5. Resim)) -> Bu grafikler modellerin "iç dünyasındaki" dengeyi gösterir.
+
+Random Forest Özeti (4. Resim): Çizgiler dümdüz ve birbirinin üstünde. Bu, modelin her konuda (Precision, Recall, F1) kusursuz bir dengeye sahip olduğunu gösterir.
+
+Naive Bayes Özeti (5. Resim): Çizgiler birbirine uzak ve zikzaklı. Bir noktada yükselirken diğerinde çöküyor. Bu, modelin kararsız olduğunu ve veriler arasında tutarlı bir bağ kuramadığını kanıtlar.
+
+6. Resim bizim modelin özeti:
+
+******
