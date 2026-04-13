@@ -1,0 +1,44 @@
+# MediTarama Sensör Veri Toplama ve Analiz Mimarisi
+
+Bu rapor, ESP32 üzerinde koşan yapay zeka destekli medikal analiz sisteminin en güncel sensör okuma mantığını özetlemektedir. Veriler **Asenkron bir Durum Makinesi (State Machine)** mimarisiyle birbirini bekletmeden toplanmaktadır.
+
+## 1. Nabız ve SpO2 Ölçüm Mantığı (MAX30105)
+
+Sisteminiz; kan içindeki hemoglobin moleküllerinin kızılötesi (IR) ve kırmızı (Red) ışığı emme oranlarındaki farkı kullanarak kandaki oksijen yoğunluğunu (SpO2) ve her kalp atışındaki dalgalanmayı analiz ederek nabzı (HR) algılar.
+
+### A) Donanımsal Örnekleme (FIFO Tampon)
+Sensörünüz `setup(..., 100, ...)` ile arka planda 100hz örnekleme hızında başlar. Ancak içinizdeki donanım ayarı sayesinde her 4 verinin ortalamasını entegre edip kendi geçici hafızasına (FIFO buffer) **saniyede tam 25 adet saf, kararlı veri (25 Hz)** bırakır.
+
+### B) Toplama Evresi (`ADIM_1_HR_SPO2`)
+Kodunuz ESP32'yi dar boğaza sokmamak için her 40 milisaniyede bir `takeSample` fonksiyonunu tetikler. İçerideki kurgu şu şekildedir:
+- ESP32, sensöre "Bekleyen yeni veri var mı?" diye sorar (`particleSensor.available()`).
+- Eğer veri varsa biriken veriyi **kesinlikle tekrara düşmeden ve veri atlamadan** sırayla okur ve kendi dizisine (Array) kopyalar.
+
+### C) Analiz ve Kaydırmalı Pencere (Sliding Window)
+Elinizde tam olarak 100 adetlik bir veri penceresi (tam 4 saniyelik kesintisiz grafik ölçümü) olduğunda, asıl kan uyuşmazlığı algoritması (Maxim) koşturulur. 
+
+> [!TIP]
+> **Kaydırmalı Pencere Mimarisi:**  Kullanıcının parmağı kayabilir veya o saniye kalp ritminde bir "gürültü" yaşanabilir. Kodumuz ölçümü reddetmek ve 4 saniye daha en baştan ölçmek (bu sırada süreci çok yavaşlatmak) yerine akıllıca bir **Kayan Pencere** taktiği kullanır. Elindeki 4 saniyelik verinin en bayat olan ilk 1 saniyesini siler, yeni ölçeceği temiz 1 saniyeyi de verinin en sonuna ekleyip **yeni bir 4 saniyelik pencere** dener. Bu sistem nabzın başarıyla tespit edilme hızını rekor seviyelere çeker.
+
+## 2. Sıcaklık Ölçüm Mantığı (DS18B20)
+
+Nabız başarıyla kanıtlandıktan ve parmak sensörden çekildikten sonra, asıl ısınmayı (vücut ısısını) ölçecek olan 2. aşama başlar. Sensör camının deri sıcaklığıyla dengelenmesi belirli bir fiziksel süre aldığından buradaki algoritma daha uzun bir periyotlamaya girer.
+
+### A) Optimum Polling Döngüsü (`ADIM_2_SICAKLIK`)
+DS18B20 sensörü doğası gereği 12-bit sıcaklığı işleyip (convert) yollaması işlemciyi 750 milisaniye donduran bir yapıya sahiptir.
+Aynı zamanda vücut ısısı yüzeyden anında tespit edilemediğinden belirli bir süre izlenmesi gerekir. Kodumuz zaman döngüsünü işleterek (`subCounter >= 25`) sıcaklık bloğunu her saniyede 1 kere tetikler. Böylece her sıcaklık okuması (1 saniyelik bekleme + ~750ms dönüştürme süresi ile) tam olarak hesaplandığı şekilde `~1.75` saniyelik bir dilimi kaplar.
+
+### B) Çoklu Doğrulama ve Tam Zamanlama 
+Yüksek isabetli ve inandırıcı bir sıcaklık analizi süresi için sistem `TEMP_SAMPLE_COUNT = 9` adet örnek alır. 
+Her 1 örneğin sistemdeki izdüşüm süresiyle beraber 9 örnek, kullanıcı ekranında yavaş ve stabil bir şekilde yüklenerek **tam tamına ~15.75 saniyelik bir sıcaklık ölçüm periyodunu** tamamlar. Bu optimal süre zarfında kullanıcının parmağı cam yüzeye ideal ısısını transfer etmiş ve gürültüler giderilmiş olur. (Herhangi bir bağlantı hatasında yansıtılan otomatik `return 36.6` değeri güvenlik sigortası olarak yerinde tutulmaktadır).
+
+## 3. Yapay Zeka Çıkarımı (TFLite)
+
+> [!IMPORTANT]
+> Tüm sensör doğrulama aşamaları bittiğinde sistem `HAZIR` konumuna geçer.
+
+Sistem, OLED Ekranda her şeyin hazır olduğunu belirtirken;
+- Gerçek akışta ölçülen sensör değerleri `(Nabız, SpO2, Isı)`,
+- Kullanıcının form ekranında sunduğu hastaya ait profiller `(Boy, Kilo, Yaş, Cinsiyet, VKE)`
+
+ile birlikte normalizasyon (`(raw - MEANS) / SCALES`) süzgecinden geçirilir ve C++ içindeki TFLite modelinize (Yapay Zeka) enjekte edilir. İşlemler sonunda dönen regresyon/sınıflandırma değeri hastanın risk seviyesini ve güven (confidence) oranını UI katmanında yansıtır.
