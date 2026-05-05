@@ -1,0 +1,27 @@
+
+1. Model Performans Metrikleri (Grafik 1-8)
+Bu grafikler, modellerin (Random Forest, Naive Bayes ve Senin MLP Modelin) başarısını 4 temel istatistiksel açıdan ölçer. Hem Orijinal Test Seti hem de 100 Bağımsız Senaryo için ayrı ayrı verilmiştir.
+
+Accuracy (Doğruluk): Modelin genel başarı oranıdır. Sistemin toplamda ne kadar haklı çıktığını gösterir. (Örn: %99.99 doğruluk, neredeyse hatasız bir sistem demektir).
+
+Precision (Keskinlik): "Riskli" teşhisi konulan kişilerin gerçekten riskli olma olasılığıdır. Yanlış alarmları (False Positive) ölçer.
+
+Recall (Duyarlılık): Sağlık projelerindeki en kritik değerdir. Gerçekten riskli olan hastaların ne kadarını yakaladığımızı gösterir. Bu değerin yüksek olması, "Gözden kaçan hasta yok" anlamına gelir.
+
+F1-Score: Keskinlik ve Duyarlılık değerlerinin dengeli bir ortalamasıdır. Modelin tutarlılığını tek bir skorla özetler.
+
+2. Critical Safety Error Analysis (Grafik 9)
+Bu grafik, yapay zekanın yaptığı hataların "türünü" analiz eder ve projenin güvenilirliğini kanıtlar.
+
+Missed Patients (Kaçan Hastalar - FN): Gerçekten riskli olduğu halde sistemin "Normal" dediği kişilerdir. Tıbbi cihazlarda bu hatanın sıfıra yakın olması beklenir. Grafikte senin MLP modelinin ve Random Forest'ın bu konuda Naive Bayes'e göre çok daha üstün olduğu görülmektedir.
+
+False Alarms (Yanlış Alarmlar - FP): Sağlıklı kişiye "Riskli" denmesidir. Bu hata sadece gereksiz kontrole yol açar, hayati tehlike yaratmaz.
+
+3. Overall Summary (Grafik 10-11-12 ve benzerleri)
+Bu grafikler, her bir algoritmanın "karakterini" tek bir tabloda özetler.
+
+Kırmızı Kesikli Çizgi (Acc): Modelin genel doğruluk seviyesini temsil eder.
+
+Sütunlar: Precision, Recall ve F1 skorlarının birbirine ne kadar yakın olduğunu gösterir. Eğer tüm sütunlar kırmızı çizgiyle aynı hizadaysa, model tüm durumlarda (sağlıklı veya hasta) aynı kararlılıkla çalışıyor demektir.
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
